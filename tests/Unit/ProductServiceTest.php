@@ -155,8 +155,8 @@ final class ProductServiceTest extends TestCase
             new Product([
                 "id" => 1,
                 "sku" => "000003",
-                "name" => "Full coverage insurance",
-                "category" => "insurance",
+                "name" => "SUV Vehicle, high end",
+                "category" => "vehicle",
                 "price_original" => 150000,
                 "price_final" => null,
                 "discount_percentage" => null,
