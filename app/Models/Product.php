@@ -18,4 +18,9 @@ class Product extends Model
         'discount_percentage',
         'currency'
     ];
+
+    public function price(): \Illuminate\Database\Eloquent\Relations\HasOne
+    {
+        return $this->hasOne(Price::class);
+    }
 }
