@@ -36,7 +36,7 @@ class ProductService
                 $product->price_final = $this->applyDiscount($product->price_original, self::INSURANCE_DISCOUNT_PERCENTAGE);
                 $product->discount_percentage = self::INSURANCE_DISCOUNT_PERCENTAGE;
             }
-            if($this->isSku000003($product)) {
+            else if($this->isSku000003($product)) {
                 $product->price_final = $this->applyDiscount($product->price_original, self::SKU_000003_DISCOUNT_PERCENTAGE);
                 $product->discount_percentage = self::SKU_000003_DISCOUNT_PERCENTAGE;
             }
