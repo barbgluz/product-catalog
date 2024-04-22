@@ -84,6 +84,36 @@ final class ProductControllerTest extends TestCase
         $this->assertCount(2, $response->getData());
     }
 
+    public function testItMustReturn404WhenTryToRetrieveProductsFromAnEmptyCategory()
+    {
+        $category = 'category_without_products';
+        $price = null;
+
+        $this->request
+            ->shouldReceive('query')
+            ->with('price')
+            ->once()
+            ->andReturnNull();
+
+        $this->request
+            ->shouldReceive('query')
+            ->with('category')
+            ->once()
+            ->andReturn($category);
+
+        $this->productService
+            ->shouldReceive('get')
+            ->with($price, $category)
+            ->once()
+            ->andReturn(new Collection());
+
+        $response = $this->productController->getProducts($this->request);
+
+        $this->assertInstanceOf(JsonResponse::class, $response);
+        $this->assertEquals(404, $response->getStatusCode());
+        $this->assertEmpty($response->getData());
+    }
+
     protected function tearDown(): void
     {
         parent::tearDown();
