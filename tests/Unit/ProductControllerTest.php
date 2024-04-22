@@ -50,7 +50,40 @@ final class ProductControllerTest extends TestCase
         $this->assertEquals(200, $response->getStatusCode());
         $this->assertCount(5, $response->getData());
     }
-    
+
+    public function testItMustReturnProductsFromACategory()
+    {
+        $jsonData = file_get_contents('tests/Unit/jsonData/insuranceCategoryProducts.json');
+        $data = new Collection(json_decode($jsonData, true));
+        $category = 'insurance';
+        $price = null;
+
+        $this->request
+            ->shouldReceive('query')
+            ->with('price')
+            ->once()
+            ->andReturnNull();
+
+        $this->request
+            ->shouldReceive('query')
+            ->with('category')
+            ->once()
+            ->andReturn($category);
+
+        $this->productService
+            ->shouldReceive('get')
+            ->with($price, $category)
+            ->once()
+            ->andReturn($data);
+
+        $response = $this->productController->getProducts($this->request);
+
+        $this->assertInstanceOf(JsonResponse::class, $response);
+        $this->assertEquals(200, $response->getStatusCode());
+        $this->assertEquals($category, $response->getData()[0]->category);
+        $this->assertCount(2, $response->getData());
+    }
+
     protected function tearDown(): void
     {
         parent::tearDown();
