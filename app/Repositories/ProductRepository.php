@@ -32,15 +32,13 @@ class ProductRepository
             $query->where('category', $category);
         });
 
-        return $query->select([
+        return $query->with(['price' => function ($query) {
+            $query->select('id', 'original', 'final', 'discount_percentage', 'currency', 'product_id');
+        }])->select([
             'id',
             'sku',
             'name',
-            'category',
-            'price_original',
-            'price_final',
-            'discount_percentage',
-            'currency'
+            'category'
         ])->get();
     }
 }
