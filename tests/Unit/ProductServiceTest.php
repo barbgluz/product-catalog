@@ -149,6 +149,34 @@ final class ProductServiceTest extends TestCase
         $this->assertEquals(62300, $result[0]->price_final);
     }
 
+    public function testItMustApplyDiscountToSku000003()
+    {
+        $products = collect([
+            new Product([
+                "id" => 1,
+                "sku" => "000003",
+                "name" => "Full coverage insurance",
+                "category" => "insurance",
+                "price_original" => 150000,
+                "price_final" => null,
+                "discount_percentage" => null,
+                "currency" => "USD",
+                "created_at" => null,
+                "updated_at" => null
+            ])
+        ]);
+
+        $this->productRepository
+            ->shouldReceive('get')
+            ->once()
+            ->andReturn(new Collection($products));
+
+        $result = $this->productService->get();
+
+        $this->assertEquals(15, $result[0]->discount_percentage);
+        $this->assertEquals(127500, $result[0]->price_final);
+    }
+
     protected function tearDown(): void
     {
         parent::tearDown();
