@@ -1,0 +1,68 @@
+openapi: 3.0.0
+info:
+  title: Product catalog
+  description: Documentation for product catalog API
+  version: 1.0.0
+paths:
+  /products:
+    get:
+      summary: Retrieve products
+      description: Retrieves a list of products.
+      parameters:
+        - name: category
+          in: query
+          description: Category of the products (optional)
+          schema:
+            type: string
+        - name: price
+          in: query
+          description: Price of the products (optional)
+          schema:
+            type: string
+      responses:
+        '200':
+          description: A list of products
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    id:
+                      type: integer
+                      description: The product's ID
+                    sku:
+                      type: string
+                      description: The product's SKU
+                    name:
+                      type: string
+                      description: The product's name
+                    category:
+                      type: string
+                      description: The product's category
+                    price_original:
+                      type: number
+                      format: float
+                      description: The original price of the product
+                    price_final:
+                      type: number
+                      format: float
+                      description: The final price of the product after discounts
+                    discount_percentage:
+                      type: number
+                      format: float
+                      description: The discount percentage applied to the product
+                    currency:
+                      type: string
+                      description: The currency used for pricing
+        '404':
+          description: No products found
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    description: Error message indicating no products found
