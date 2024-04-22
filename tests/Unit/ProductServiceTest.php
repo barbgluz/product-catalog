@@ -117,6 +117,38 @@ final class ProductServiceTest extends TestCase
         }
     }
 
+    public function testItMustApplyDiscountToInsuranceCategory()
+    {
+        $category = 'insurance';
+        $price = null;
+
+        $products = collect([
+            new Product([
+                "id" => 1,
+                "sku" => "000001",
+                "name" => "Full coverage insurance",
+                "category" => "insurance",
+                "price_original" => 89000,
+                "price_final" => null,
+                "discount_percentage" => null,
+                "currency" => "USD",
+                "created_at" => null,
+                "updated_at" => null
+            ])
+        ]);
+
+        $this->productRepository
+            ->shouldReceive('getFiltered')
+            ->with($price, $category)
+            ->once()
+            ->andReturn(new Collection($products));
+
+        $result = $this->productService->get($price, $category);
+
+        $this->assertEquals(30, $result[0]->discount_percentage);
+        $this->assertEquals(62300, $result[0]->price_final);
+    }
+
     protected function tearDown(): void
     {
         parent::tearDown();
