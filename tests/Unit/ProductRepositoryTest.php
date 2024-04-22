@@ -63,6 +63,25 @@ final class ProductRepositoryTest extends TestCase
         $this->assertEquals(20000, $products[0]->price_original);
     }
 
+    public function testGetByPriceAndCategory(): void
+    {
+        $category = 'insurance';
+        $price = 20000;
+
+        $repository = new ProductRepository();
+
+        $products = $repository->getFiltered($price, $category);
+
+        $this->assertCount(1, $products);
+        $this->assertInstanceOf(Collection::class, $products);
+        foreach ($products as $product) {
+            $this->assertEquals($category, $product->category);
+        }
+        foreach ($products as $product) {
+            $this->assertEquals($price, $product->price_original);
+        }
+    }
+
     protected function tearDown(): void
     {
         parent::tearDown();
