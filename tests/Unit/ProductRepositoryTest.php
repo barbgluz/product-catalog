@@ -31,6 +31,24 @@ final class ProductRepositoryTest extends TestCase
         $this->assertCount(5, $products);
     }
 
+    public function testGetByCategory(): void
+    {
+        $category = 'insurance';
+        $price = null;
+        $jsonData = file_get_contents('tests/Unit/jsonData/insuranceCategoryProducts.json');
+        $data = json_decode($jsonData, true);
+
+        $repository = new ProductRepository();
+
+        $products = $repository->getFiltered($price, $category);
+
+        $this->assertCount(count($data), $products);
+        $this->assertInstanceOf(Collection::class, $products);
+        foreach ($products as $product) {
+            $this->assertEquals($category, $product->category);
+        }
+    }
+
     protected function tearDown(): void
     {
         parent::tearDown();
