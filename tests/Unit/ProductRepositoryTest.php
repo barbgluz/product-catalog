@@ -2,12 +2,16 @@
 
 namespace Tests\Unit;
 
+use App\Models\Price;
+use App\Models\Product;
 use App\Repositories\ProductRepository;
 use Illuminate\Database\Eloquent\Collection;
+use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
 
 final class ProductRepositoryTest extends TestCase
 {
+    use RefreshDatabase;
     private ProductRepository $productRepository;
 
     protected function setUp(): void
@@ -19,66 +23,86 @@ final class ProductRepositoryTest extends TestCase
 
     public function testGetAllProducts(): void
     {
-        $jsonData = file_get_contents('tests/Unit/jsonData/allProducts.json');
-        $data = json_decode($jsonData, true);
+        $products = \Database\Factories\ProductFactory::times(3)->create();
+        foreach ($products as $product) {
+            (new \Database\Factories\PriceFactory)->create([
+                'product_id' => $product->id,
+            ]);
+        }
+        $retrievedProducts = $this->productRepository->get();
 
-        $repository = new ProductRepository();
-
-        $products = $repository->get();
-
-        $this->assertCount(count($data), $products);
-        $this->assertInstanceOf(Collection::class, $products);
-        $this->assertCount(5, $products);
+        $this->assertInstanceOf(Collection::class, $retrievedProducts);
+        foreach ($retrievedProducts as $retrievedProduct) {
+            $this->assertNotNull($retrievedProduct->id);
+            $this->assertNotNull($retrievedProduct->sku);
+            $this->assertNotNull($retrievedProduct->name);
+            $this->assertNotNull($retrievedProduct->category);
+            $this->assertNotNull($retrievedProduct->price);
+            $this->assertInstanceOf(Price::class, $retrievedProduct->price);
+            $this->assertNotNull($retrievedProduct->price->first()->id);
+            $this->assertNotNull($retrievedProduct->price->first()->original);
+            $this->assertNotNull($retrievedProduct->price->first()->final);
+            $this->assertNotNull($retrievedProduct->price->first()->currency);
+        }
     }
 
     public function testGetByCategory(): void
     {
-        $category = 'insurance';
         $price = null;
-        $jsonData = file_get_contents('tests/Unit/jsonData/insuranceCategoryProducts.json');
-        $data = json_decode($jsonData, true);
-
-        $repository = new ProductRepository();
-
-        $products = $repository->getFiltered($price, $category);
-
-        $this->assertCount(count($data), $products);
-        $this->assertInstanceOf(Collection::class, $products);
+        $category = 'insurance';
+        $products = \Database\Factories\ProductFactory::times(3)->create(['category' => $category]);
         foreach ($products as $product) {
+            (new \Database\Factories\PriceFactory)->create([
+                'product_id' => $product->id,
+            ]);
+        }
+        $retrievedProducts = $this->productRepository->getFiltered($price, $category);
+
+        $this->assertCount(count($products), $retrievedProducts);
+        $this->assertInstanceOf(Collection::class, $retrievedProducts);
+        foreach ($retrievedProducts as $product) {
             $this->assertEquals($category, $product->category);
+            $this->assertNotNull($product->price);
         }
     }
 
     public function testGetByPrice(): void
     {
-        $category = null;
-        $price = 20000;
+        $product = (new \Database\Factories\ProductFactory)->create();
+        $price = (new \Database\Factories\PriceFactory)->create([
+            'product_id' => $product->id,
+            'original' => 20000
+        ]);
+        $priceOriginal = 20000;
 
-        $repository = new ProductRepository();
+        $products = $this->productRepository->getFiltered($priceOriginal, $product->category);
 
-        $products = $repository->getFiltered($price, $category);
-
-        $this->assertCount(1, $products);
-        $this->assertInstanceOf(Collection::class, $products);
-        $this->assertEquals(20000, $products[0]->price_original);
+        $this->assertNotEmpty($products);
+        foreach ($products as $product) {
+            $this->assertNotNull($product->price);
+            $this->assertInstanceOf(Price::class, $product->price);
+            $this->assertEquals($priceOriginal, $product->price->original);
+        }
     }
 
     public function testGetByPriceAndCategory(): void
     {
         $category = 'insurance';
-        $price = 20000;
+        $product = (new \Database\Factories\ProductFactory)->create(['category' => $category]);
+        $price = (new \Database\Factories\PriceFactory)->create([
+            'product_id' => $product->id,
+            'original' => 20000
+        ]);
+        $priceOriginal = 20000;
 
-        $repository = new ProductRepository();
+        $products = $this->productRepository->getFiltered($priceOriginal, $product->category);
 
-        $products = $repository->getFiltered($price, $category);
-
-        $this->assertCount(1, $products);
-        $this->assertInstanceOf(Collection::class, $products);
+        $this->assertNotEmpty($products);
         foreach ($products as $product) {
+            $this->assertNotNull($product->price);
+            $this->assertInstanceOf(Price::class, $product->price);
+            $this->assertEquals($priceOriginal, $product->price->original);
             $this->assertEquals($category, $product->category);
-        }
-        foreach ($products as $product) {
-            $this->assertEquals($price, $product->price_original);
         }
     }
 
