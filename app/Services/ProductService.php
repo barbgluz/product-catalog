@@ -33,27 +33,26 @@ class ProductService
     {
         foreach ($products as $product) {
             if($this->isInsurance($product)) {
-                $product->price_final = $this->applyDiscount($product->price_original, self::INSURANCE_DISCOUNT_PERCENTAGE);
-                $product->discount_percentage = self::INSURANCE_DISCOUNT_PERCENTAGE;
+                $product->price->final = $this->applyDiscount($product->price->original, self::INSURANCE_DISCOUNT_PERCENTAGE);
+                $product->price->discount_percentage = self::INSURANCE_DISCOUNT_PERCENTAGE . '%';
             }
             else if($this->isSku000003($product)) {
-                $product->price_final = $this->applyDiscount($product->price_original, self::SKU_000003_DISCOUNT_PERCENTAGE);
-                $product->discount_percentage = self::SKU_000003_DISCOUNT_PERCENTAGE;
+                $product->price->final = $this->applyDiscount($product->price->original, self::SKU_000003_DISCOUNT_PERCENTAGE);
+                $product->price->discount_percentage = self::SKU_000003_DISCOUNT_PERCENTAGE . '%';
             }
             else {
-                $product->price_final = $product->price_original;
+                $product->price->final = $product->price->original;
             }
         }
-
     }
     private function isInsurance(Product $product): bool
     {
-        return $product->category == 'insurance';
+        return $product->category === 'insurance';
     }
 
     private function isSku000003(Product $product): bool
     {
-        return $product->sku == '000003';
+        return $product->sku === '000003';
     }
 
     private function applyDiscount(int $price, int $discountPercentage): int

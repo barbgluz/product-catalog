@@ -10,15 +10,13 @@ class ProductRepository
 {
     public function get(): Collection
     {
-        return Product::select([
+        return Product::with(['price' => function ($query) {
+            $query->select('id', 'original', 'final', 'discount_percentage', 'currency', 'product_id');
+        }])->select([
             'id',
             'sku',
             'name',
-            'category',
-            'price_original',
-            'price_final',
-            'discount_percentage',
-            'currency'
+            'category'
         ])->get();
     }
 
@@ -26,23 +24,23 @@ class ProductRepository
     {
         $query = Product::query();
 
-        $query->when($price, function (Builder $query, $price) {
-            $query->where('price_original', '<=', $price);
+        $query->when($price, function ($query, $price) {
+            $query->whereHas('price', function ($query) use ($price) {
+                $query->where('original', $price);
+            });
         });
 
         $query->when($category, function (Builder $query, $category) {
             $query->where('category', $category);
         });
 
-        return $query->select([
+        return $query->with(['price' => function ($query) {
+            $query->select('id', 'original', 'final', 'discount_percentage', 'currency', 'product_id');
+        }])->select([
             'id',
             'sku',
             'name',
-            'category',
-            'price_original',
-            'price_final',
-            'discount_percentage',
-            'currency'
+            'category'
         ])->get();
     }
 }

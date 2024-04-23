@@ -12,10 +12,11 @@ class Product extends Model
     protected $fillable = [
         'sku',
         'name',
-        'category',
-        'price_original',
-        'price_final',
-        'discount_percentage',
-        'currency'
+        'category'
     ];
+
+    public function price(): \Illuminate\Database\Eloquent\Relations\HasOne
+    {
+        return $this->hasOne(Price::class);
+    }
 }

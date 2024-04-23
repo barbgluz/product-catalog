@@ -16,10 +16,6 @@ return new class extends Migration
             $table->string('sku')->unique();
             $table->string('name');
             $table->string('category');
-            $table->integer('price_original');
-            $table->integer('price_final')->nullable();
-            $table->decimal('discount_percentage', 5, 2)->nullable();
-            $table->string('currency', 3)->default('USD');
             $table->timestamps();
         });
     }
