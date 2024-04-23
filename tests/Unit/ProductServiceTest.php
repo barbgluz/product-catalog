@@ -6,12 +6,14 @@ use App\Models\Product;
 use App\Repositories\ProductRepository;
 use App\Services\ProductService;
 use Illuminate\Database\Eloquent\Collection;
+use Illuminate\Foundation\Testing\RefreshDatabase;
 use Mockery;
 use Mockery\Mock;
 use Tests\TestCase;
 
 final class ProductServiceTest extends TestCase
 {
+    use RefreshDatabase;
     private ProductService $productService;
 
     private ProductRepository|Mock $productRepository;
@@ -26,155 +28,212 @@ final class ProductServiceTest extends TestCase
 
     public function testItMustGetAllProducts()
     {
-        $jsonData = file_get_contents('tests/Unit/jsonData/allProducts.json');
-        $data = new Collection(json_decode($jsonData, true));
-
-        $products = collect($data)->map(function ($productData) {
-            return new Product($productData);
-        });
+        $expectedProducts = \Database\Factories\ProductFactory::times(5)->create();
+        foreach ($expectedProducts as $product) {
+            (new \Database\Factories\PriceFactory)->create([
+                'product_id' => $product->id,
+            ]);
+        }
 
         $this->productRepository
             ->shouldReceive('get')
-            ->once()
-            ->andReturn(new Collection($products));
+            ->andReturn($expectedProducts);
 
-        $result = $this->productService->get();
+        $products = $this->productService->get();
 
-        $this->assertInstanceOf(Collection::class, $result);
+        $this->assertEquals($expectedProducts, $products);
+        $this->assertCount(count($expectedProducts), $products);
+        foreach ($products as $product) {
+            $this->assertInstanceOf(Product::class, $product);
+            $this->assertNotNull($product->price);
+        }
     }
 
     public function testItMustGetProductsFromACategory()
     {
         $category = 'insurance';
         $price = null;
-        $jsonData = file_get_contents('tests/Unit/jsonData/insuranceCategoryProducts.json');
-        $data = new Collection(json_decode($jsonData, true));
-
-        $products = collect($data)->map(function ($productData) {
-            return new Product($productData);
-        });
+        $expectedProducts = \Database\Factories\ProductFactory::times(5)->create(['category' => $category]);
+        foreach ($expectedProducts as $product) {
+            (new \Database\Factories\PriceFactory)->create([
+                'product_id' => $product->id,
+            ]);
+        }
 
         $this->productRepository
             ->shouldReceive('getFiltered')
             ->with($price, $category)
-            ->once()
-            ->andReturn(new Collection($products));
+            ->andReturn($expectedProducts);
 
-        $result = $this->productService->get($price, $category);
+        $products = $this->productService->get($price, $category);
 
-        $this->assertInstanceOf(Collection::class, $result);
-        $this->assertCount(2, $result);
+        $this->assertEquals($expectedProducts, $products);
+        $this->assertCount(count($expectedProducts), $products);
+        foreach ($products as $product) {
+            $this->assertInstanceOf(Product::class, $product);
+            $this->assertEquals($category, $product->category);
+            $this->assertNotNull($product->price);
+        }
     }
 
     public function testItMustGetProductsFromPrice()
     {
         $category = null;
         $price = 20000;
-        $jsonData = file_get_contents('tests/Unit/jsonData/insuranceCategoryAndPrice20000Products.json');
-        $data = new Collection(json_decode($jsonData, true));
-
-        $products = collect($data)->map(function ($productData) {
-            return new Product($productData);
-        });
+        $expectedProducts = \Database\Factories\ProductFactory::times(5)->create();
+        foreach ($expectedProducts as $product) {
+            (new \Database\Factories\PriceFactory)->create([
+                'original' => $price,
+                'product_id' => $product->id,
+            ]);
+        }
 
         $this->productRepository
             ->shouldReceive('getFiltered')
             ->with($price, $category)
-            ->once()
-            ->andReturn(new Collection($products));
+            ->andReturn($expectedProducts);
 
-        $result = $this->productService->get($price, $category);
+        $products = $this->productService->get($price, $category);
 
-        $this->assertInstanceOf(Collection::class, $result);
-        $this->assertCount(1, $result);
+        $this->assertEquals($expectedProducts, $products);
+        $this->assertCount(count($expectedProducts), $products);
         foreach ($products as $product) {
-            $this->assertEquals($price, $product->price_original);
+            $this->assertInstanceOf(Product::class, $product);
+            $this->assertNotNull($product->price);
+            $this->assertEquals($price, $product->price->original);
         }
     }
+
     public function testItMustGetProductsFromAPriceAndACategory()
     {
         $category = 'insurance';
         $price = 20000;
-        $jsonData = file_get_contents('tests/Unit/jsonData/insuranceCategoryAndPrice20000Products.json');
-        $data = new Collection(json_decode($jsonData, true));
-
-        $products = collect($data)->map(function ($productData) {
-            return new Product($productData);
-        });
+        $expectedProducts = \Database\Factories\ProductFactory::times(5)->create(['category' => $category]);
+        foreach ($expectedProducts as $product) {
+            (new \Database\Factories\PriceFactory)->create([
+                'original' => $price,
+                'product_id' => $product->id,
+            ]);
+        }
 
         $this->productRepository
             ->shouldReceive('getFiltered')
             ->with($price, $category)
-            ->once()
-            ->andReturn(new Collection($products));
+            ->andReturn($expectedProducts);
 
-        $result = $this->productService->get($price, $category);
+        $products = $this->productService->get($price, $category);
 
-        $this->assertInstanceOf(Collection::class, $result);
-        $this->assertCount(1, $result);
+        $this->assertEquals($expectedProducts, $products);
+        $this->assertCount(count($expectedProducts), $products);
         foreach ($products as $product) {
-            $this->assertEquals($price, $product->price_original);
+            $this->assertInstanceOf(Product::class, $product);
+            $this->assertEquals($category, $product->category);
+            $this->assertNotNull($product->price);
+            $this->assertEquals($price, $product->price->original);
         }
     }
 
     public function testItMustApplyDiscountToInsuranceCategory()
     {
         $category = 'insurance';
-        $price = null;
-
-        $products = collect([
-            new Product([
-                "id" => 1,
-                "sku" => "000001",
-                "name" => "Full coverage insurance",
-                "category" => "insurance",
-                "price_original" => 89000,
-                "price_final" => null,
-                "discount_percentage" => null,
-                "currency" => "USD",
-                "created_at" => null,
-                "updated_at" => null
-            ])
-        ]);
+        $price = 80000;
+        $discountedPrice = 56000;
+        $discountPercentage = "30%";
+        $expectedProducts = \Database\Factories\ProductFactory::times(5)->create(['category' => $category]);
+        foreach ($expectedProducts as $product) {
+            (new \Database\Factories\PriceFactory)->create([
+                'original' => $price,
+                'product_id' => $product->id,
+            ]);
+        }
 
         $this->productRepository
             ->shouldReceive('getFiltered')
             ->with($price, $category)
-            ->once()
-            ->andReturn(new Collection($products));
+            ->andReturn($expectedProducts);
 
-        $result = $this->productService->get($price, $category);
+        $products = $this->productService->get($price, $category);
 
-        $this->assertEquals(30, $result[0]->discount_percentage);
-        $this->assertEquals(62300, $result[0]->price_final);
+        $this->assertEquals($expectedProducts, $products);
+        $this->assertCount(count($expectedProducts), $products);
+        foreach ($products as $product) {
+            $this->assertInstanceOf(Product::class, $product);
+            $this->assertEquals($category, $product->category);
+            $this->assertNotNull($product->price);
+            $this->assertEquals($discountPercentage, $product->price->discount_percentage);
+            $this->assertEquals($price, $product->price->original);
+            $this->assertEquals($discountedPrice, $product->price->final);
+        }
     }
 
     public function testItMustApplyDiscountToSku000003()
     {
-        $products = collect([
-            new Product([
-                "id" => 1,
-                "sku" => "000003",
-                "name" => "SUV Vehicle, high end",
-                "category" => "vehicle",
-                "price_original" => 150000,
-                "price_final" => null,
-                "discount_percentage" => null,
-                "currency" => "USD",
-                "created_at" => null,
-                "updated_at" => null
-            ])
+        $sku = '000003';
+        $price = 80000;
+        $discountedPrice = 68000;
+        $discountPercentage = "15%";
+
+        $product = (new \Database\Factories\ProductFactory)->create(['sku' => $sku]);
+        (new \Database\Factories\PriceFactory)->create([
+            'original' => $price,
+            'product_id' => $product->id,
         ]);
+
+        $expectedProduct = new Collection([$product]);
 
         $this->productRepository
             ->shouldReceive('get')
-            ->once()
-            ->andReturn(new Collection($products));
+            ->andReturn($expectedProduct);
 
-        $result = $this->productService->get();
+        $products = $this->productService->get();
 
-        $this->assertEquals(15, $result[0]->discount_percentage);
-        $this->assertEquals(127500, $result[0]->price_final);
+        $this->assertEquals($expectedProduct, $products);
+        $this->assertCount(count($expectedProduct), $products);
+        foreach ($products as $product) {
+            $this->assertInstanceOf(Product::class, $product);
+            $this->assertNotNull($product->price);
+            $this->assertEquals($discountPercentage, $product->price->discount_percentage);
+            $this->assertEquals($price, $product->price->original);
+            $this->assertEquals($discountedPrice, $product->price->final);
+        }
+        $this->refreshDatabase();
+    }
+
+    public function testItMustApplyOnlyInsuranceDiscount_ifSku000003BelongsToInsuranceCategory()
+    {
+        $category = 'insurance';
+        $sku = '000003';
+        $price = 80000;
+        $discountedPrice = 56000;
+        $discountPercentage = "30%";
+
+        $product = (new \Database\Factories\ProductFactory)->create([
+            'sku' => $sku,
+            'category' => $category,
+        ]);
+        (new \Database\Factories\PriceFactory)->create([
+            'original' => $price,
+            'product_id' => $product->id,
+        ]);
+
+        $expectedProduct = new Collection([$product]);
+
+        $this->productRepository
+            ->shouldReceive('get')
+            ->andReturn($expectedProduct);
+
+        $products = $this->productService->get();
+
+        $this->assertEquals($expectedProduct, $products);
+        $this->assertCount(count($expectedProduct), $products);
+        foreach ($products as $product) {
+            $this->assertInstanceOf(Product::class, $product);
+            $this->assertNotNull($product->price);
+            $this->assertEquals($discountPercentage, $product->price->discount_percentage);
+            $this->assertEquals($price, $product->price->original);
+            $this->assertEquals($discountedPrice, $product->price->final);
+        }
+        $this->refreshDatabase();
     }
 
     protected function tearDown(): void
