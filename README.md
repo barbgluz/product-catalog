@@ -47,8 +47,8 @@ It's build using Laravel, MySQL database and includes Swagger documentation for 
 ## Installation
 1. Clone the repository:
 ```bash
-    git clone git@github.com:barbgluz/product-catalog.git
-    cd product-catalog
+git clone git@github.com:barbgluz/product-catalog.git
+cd product-catalog
 ```
 
 2. Install dependencies:
