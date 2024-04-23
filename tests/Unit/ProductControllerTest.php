@@ -3,6 +3,7 @@
 namespace Tests\Unit;
 
 use App\Http\Controllers\ProductController;
+use App\Models\Product;
 use App\Services\ProductService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -24,8 +25,12 @@ final class ProductControllerTest extends TestCase
 
     public function testItMustReturnAllProducts()
     {
-        $jsonData = file_get_contents('tests/Unit/jsonData/allProducts.json');
-        $data = new Collection(json_decode($jsonData, true));
+        $expectedProducts = \Database\Factories\ProductFactory::times(5)->create();
+        foreach ($expectedProducts as $product) {
+            (new \Database\Factories\PriceFactory)->create([
+                'product_id' => $product->id,
+            ]);
+        }
 
         $this->request
             ->shouldReceive('query')
@@ -42,21 +47,28 @@ final class ProductControllerTest extends TestCase
         $this->productService
             ->shouldReceive('get')
             ->once()
-            ->andReturn($data);
+            ->andReturn($expectedProducts->load('price'));
 
         $response = $this->productController->getProducts($this->request);
 
         $this->assertInstanceOf(JsonResponse::class, $response);
         $this->assertEquals(200, $response->getStatusCode());
         $this->assertCount(5, $response->getData());
+        foreach ($response->getData() as $product) {
+            $this->assertNotNull($product->price);
+        }
     }
 
     public function testItMustReturnProductsFromACategory()
     {
-        $jsonData = file_get_contents('tests/Unit/jsonData/insuranceCategoryProducts.json');
-        $data = new Collection(json_decode($jsonData, true));
         $category = 'insurance';
         $price = null;
+        $expectedProducts = \Database\Factories\ProductFactory::times(5)->create(['category' => $category]);
+        foreach ($expectedProducts as $product) {
+            (new \Database\Factories\PriceFactory)->create([
+                'product_id' => $product->id,
+            ]);
+        }
 
         $this->request
             ->shouldReceive('query')
@@ -74,14 +86,17 @@ final class ProductControllerTest extends TestCase
             ->shouldReceive('get')
             ->with($price, $category)
             ->once()
-            ->andReturn($data);
+            ->andReturn($expectedProducts->load('price'));
 
         $response = $this->productController->getProducts($this->request);
 
         $this->assertInstanceOf(JsonResponse::class, $response);
         $this->assertEquals(200, $response->getStatusCode());
-        $this->assertEquals($category, $response->getData()[0]->category);
-        $this->assertCount(2, $response->getData());
+        $this->assertCount(5, $response->getData());
+        foreach ($response->getData() as $product) {
+            $this->assertEquals($category, $product->category);
+            $this->assertNotNull($product->price);
+        }
     }
 
     public function testItMustReturn404WhenTryToRetrieveProductsFromAnEmptyCategory()
