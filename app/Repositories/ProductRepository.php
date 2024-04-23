@@ -24,8 +24,10 @@ class ProductRepository
     {
         $query = Product::query();
 
-        $query->when($price, function (Builder $query, $price) {
-            $query->where('price_original', '<=', $price);
+        $query->when($price, function ($query, $price) {
+            $query->whereHas('price', function ($query) use ($price) {
+                $query->where('original', $price);
+            });
         });
 
         $query->when($category, function (Builder $query, $category) {
