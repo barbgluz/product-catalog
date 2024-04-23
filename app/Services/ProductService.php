@@ -47,12 +47,12 @@ class ProductService
     }
     private function isInsurance(Product $product): bool
     {
-        return $product->category == 'insurance';
+        return $product->category === 'insurance';
     }
 
     private function isSku000003(Product $product): bool
     {
-        return $product->sku == '000003';
+        return $product->sku === '000003';
     }
 
     private function applyDiscount(int $price, int $discountPercentage): int
