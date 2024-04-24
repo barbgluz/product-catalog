@@ -2,44 +2,65 @@
 
 namespace Tests\Feature;
 
+use App\Http\Controllers\ProductController;
+use App\Models\Product;
+use App\Services\ProductService;
 use Illuminate\Database\Eloquent\Collection;
+use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Http\Request;
+use Mockery;
 use Tests\TestCase;
 
 class ProductTest extends TestCase
 {
-    public function test_the_products_endpoint_and_returns_a_successful_response(): void
+    use RefreshDatabase;
+    public function test_it_returns_products_with_valid_parameters()
     {
-        $jsonData = file_get_contents('tests/Unit/jsonData/allProducts.json');
-        $data = new Collection(json_decode($jsonData, true));
+        $productService = Mockery::mock(ProductService::class);
+        $productService->shouldReceive('get')->once()->with(100, 'insurance')->andReturn(new Collection([
+            new Product(['id' => 1, 'sku' => 'SKU001', 'name' => 'Product A', 'category' => 'insurance']),
+            new Product(['id' => 2, 'sku' => 'SKU002', 'name' => 'Product B', 'category' => 'insurance']),
+        ]));
 
-        $response = $this->get('/products');
+        $this->app->instance(ProductService::class, $productService);
 
-        $response->assertStatus(200);
-        $response->assertJson($data->toArray());
+        $request = Request::create('/products', 'GET', ['price' => 100, 'category' => 'insurance']);
+
+        $controller = new ProductController($productService);
+        $response = $controller->getProducts($request);
+
+        $this->assertEquals(200, $response->getStatusCode());
+
+        $this->assertCount(2, $response->getData());
+        $responseDataArray = array_map(function ($item) {
+            return (array) $item;
+        }, $response->getData());
+
+        $this->assertEquals([
+            ['sku' => 'SKU001', 'name' => 'Product A', 'category' => 'insurance'],
+            ['sku' => 'SKU002', 'name' => 'Product B', 'category' => 'insurance'],
+        ], $responseDataArray);
     }
 
-    public function test_the_products_endpoint_with_category_and_returns_a_successful_response(): void
+
+    public function test_it_returns_404_when_no_products_found()
     {
-        $jsonData = file_get_contents('tests/Unit/jsonData/insuranceCategoryProducts.json');
-        $data = new Collection(json_decode($jsonData, true));
-        $category = 'insurance';
+        $productService = Mockery::mock(ProductService::class);
+        $productService->shouldReceive('get')->once()->with(100, 'insurance')->andReturn(new Collection());
 
-        $response = $this->get('/products?category='.$category);
+        $this->app->instance(ProductService::class, $productService);
 
-        $response->assertStatus(200);
-        $response->assertJson($data->toArray());
+        $request = Request::create('/products', 'GET', ['price' => 100, 'category' => 'insurance']);
+
+        $controller = new ProductController($productService);
+        $response = $controller->getProducts($request);
+
+        $this->assertEquals(404, $response->getStatusCode());
     }
 
-    public function test_the_products_endpoint_with_category_and_price_and_returns_a_successful_response(): void
+    protected function tearDown(): void
     {
-        $jsonData = file_get_contents('tests/Unit/jsonData/insuranceCategoryAndPrice20000Products.json');
-        $data = new Collection(json_decode($jsonData, true));
-        $category = 'insurance';
-        $price = 20000;
-
-        $response = $this->get('/products?category='.$category.'&price='.$price);
-
-        $response->assertStatus(200);
-        $response->assertJson($data->toArray());
+        parent::tearDown();
+        Mockery::close();
     }
 }
