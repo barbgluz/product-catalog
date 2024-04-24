@@ -1,0 +1,35 @@
+version: '3.9'
+
+services:
+  app:
+    image: product-catalog:latest
+    build:
+      target: app
+      context: .
+    env_file:
+      - .env
+    ports:
+      - "8000:80"
+    volumes:
+      - .:/var/www/html
+    depends_on:
+      - mysql
+      - redis
+  mysql:
+    platform: "linux/amd64"
+    image: mysql:5.7
+    environment:
+      MYSQL_RANDOM_ROOT_PASSWORD: true
+      MYSQL_DATABASE: product_catalog
+      MYSQL_USER: product_catalog
+      MYSQL_PASSWORD: secretpassword
+    ports:
+      - "3306:3306"
+    volumes:
+      - dbdata:/var/lib/mysql
+  redis:
+    image: redis:latest
+    ports:
+      - "6379:6379"
+volumes:
+  dbdata:
