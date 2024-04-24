@@ -5,6 +5,7 @@ namespace App\Services;
 use App\Models\Product;
 use App\Repositories\ProductRepository;
 use Illuminate\Database\Eloquent\Collection;
+use Illuminate\Support\Facades\Cache;
 
 class ProductService
 {
@@ -20,10 +21,21 @@ class ProductService
 
     public function get(int $price = null, string $category = null): Collection
     {
-        $products = ($category || $price)?
-            $this->productRepository->getFiltered($price, $category)
-            : $this->productRepository->get();
+        if ($category || $price) {
+            $cacheKey = 'products_filtered_' . $price . '_' . $category;
 
+            if (Cache::has($cacheKey)) {
+                return Cache::get($cacheKey);
+            }
+            $products = $this->productRepository->getFiltered($price, $category);
+        } else {
+            $cacheKey = 'products_all';
+
+            if (Cache::has($cacheKey)) {
+                return Cache::get($cacheKey);
+            }
+            $products = $this->productRepository->get();
+        }
         $this->setFinalPrice($products);
 
         return $products;
