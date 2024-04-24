@@ -2,6 +2,8 @@
 
 namespace App\Services;
 
+use App\DTO\PriceDTO;
+use App\DTO\ProductDTO;
 use App\Models\Product;
 use App\Repositories\ProductRepository;
 use Illuminate\Database\Eloquent\Collection;
@@ -38,7 +40,7 @@ class ProductService
         }
         $this->setFinalPrice($products);
 
-        return $products;
+        return $this->createProductsDTO($products);
     }
 
     private function setFinalPrice(Collection $products): void
@@ -70,5 +72,21 @@ class ProductService
     private function applyDiscount(int $price, int $discountPercentage): int
     {
         return $price - ($price * $discountPercentage / 100);
+    }
+
+    private function createProductsDTO(Collection $products): Collection
+    {
+        $productsDTO = new Collection();
+        foreach ($products as $product) {
+            $priceDTO = new PriceDTO($product->price->original, $product->price->final, $product->price->discount_percentage, $product->price->currency);
+
+            $productsDTO->push(new ProductDTO(
+                $product->sku,
+                $product->name,
+                $product->category,
+                $priceDTO
+            ));
+        }
+        return $productsDTO;
     }
 }
