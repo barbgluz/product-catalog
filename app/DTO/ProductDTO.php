@@ -9,7 +9,7 @@ class ProductDTO
     public string $category;
     public PriceDTO $price;
 
-    public function __construct(int $sku, string $name, string $category, PriceDTO $price)
+    public function __construct(string $sku, string $name, string $category, PriceDTO $price)
     {
         $this->sku = $sku;
         $this->name = $name;
