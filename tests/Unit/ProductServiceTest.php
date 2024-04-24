@@ -2,6 +2,8 @@
 
 namespace Tests\Unit;
 
+use App\DTO\PriceDTO;
+use App\DTO\ProductDTO;
 use App\Models\Product;
 use App\Repositories\ProductRepository;
 use App\Services\ProductService;
@@ -30,6 +32,7 @@ final class ProductServiceTest extends TestCase
     public function testItMustGetAllProducts_withoutCache()
     {
         $cacheKey = 'products_all';
+
         $expectedProducts = \Database\Factories\ProductFactory::times(5)->create();
         foreach ($expectedProducts as $product) {
             (new \Database\Factories\PriceFactory)->create([
@@ -47,10 +50,12 @@ final class ProductServiceTest extends TestCase
 
         $products = $this->productService->get();
 
-        $this->assertEquals($expectedProducts, $products);
-        $this->assertCount(count($expectedProducts), $products);
+        $expectedProductsDTO = $this->convertToProductDTOs($expectedProducts);
+
+        $this->assertEquals($expectedProductsDTO->toArray(), $products->toArray());
+        $this->assertCount($expectedProductsDTO->count(), $products);
         foreach ($products as $product) {
-            $this->assertInstanceOf(Product::class, $product);
+            $this->assertInstanceOf(ProductDTO::class, $product);
             $this->assertNotNull($product->price);
         }
     }
@@ -112,10 +117,12 @@ final class ProductServiceTest extends TestCase
 
         $products = $this->productService->get($price, $category);
 
-        $this->assertEquals($expectedProducts, $products);
-        $this->assertCount(count($expectedProducts), $products);
+        $expectedProductsDTO = $this->convertToProductDTOs($expectedProducts);
+
+        $this->assertEquals($expectedProductsDTO, $products);
+        $this->assertCount(count($expectedProductsDTO), $products);
         foreach ($products as $product) {
-            $this->assertInstanceOf(Product::class, $product);
+            $this->assertInstanceOf(ProductDTO::class, $product);
             $this->assertEquals($category, $product->category);
             $this->assertNotNull($product->price);
         }
@@ -159,7 +166,7 @@ final class ProductServiceTest extends TestCase
         }
     }
 
-    public function testItMustGetProductsFromPrice_withouCache()
+    public function testItMustGetProductsFromPrice_withoutCache()
     {
         $category = null;
         $price = 20000;
@@ -183,10 +190,12 @@ final class ProductServiceTest extends TestCase
 
         $products = $this->productService->get($price, $category);
 
-        $this->assertEquals($expectedProducts, $products);
-        $this->assertCount(count($expectedProducts), $products);
+        $expectedProductsDTO = $this->convertToProductDTOs($expectedProducts);
+
+        $this->assertEquals($expectedProductsDTO, $products);
+        $this->assertCount(count($expectedProductsDTO), $products);
         foreach ($products as $product) {
-            $this->assertInstanceOf(Product::class, $product);
+            $this->assertInstanceOf(ProductDTO::class, $product);
             $this->assertNotNull($product->price);
             $this->assertEquals($price, $product->price->original);
         }
@@ -254,10 +263,12 @@ final class ProductServiceTest extends TestCase
 
         $products = $this->productService->get($price, $category);
 
-        $this->assertEquals($expectedProducts, $products);
-        $this->assertCount(count($expectedProducts), $products);
+        $expectedProductsDTO = $this->convertToProductDTOs($expectedProducts);
+
+        $this->assertEquals($expectedProductsDTO, $products);
+        $this->assertCount(count($expectedProductsDTO), $products);
         foreach ($products as $product) {
-            $this->assertInstanceOf(Product::class, $product);
+            $this->assertInstanceOf(ProductDTO::class, $product);
             $this->assertEquals($category, $product->category);
             $this->assertNotNull($product->price);
             $this->assertEquals($price, $product->price->original);
@@ -266,144 +277,149 @@ final class ProductServiceTest extends TestCase
 
     public function testItMustGetProductsFromAPriceAndACategory_withCache()
     {
+        $price = 100;
         $category = 'insurance';
-        $price = 20000;
+
         $cacheKey = 'products_filtered_' . $price . '_' . $category;
 
-        $expectedProducts = \Database\Factories\ProductFactory::times(5)->create(['category' => $category]);
+        $expectedProducts = \Database\Factories\ProductFactory::times(3)->create(['category' => $category]);
         foreach ($expectedProducts as $product) {
             (new \Database\Factories\PriceFactory)->create([
-                'original' => $price,
                 'product_id' => $product->id,
+                'original' => $price,
             ]);
         }
 
         Cache::shouldReceive('has')
             ->with($cacheKey)
-            ->andReturn(true);
+            ->andReturn(false);
+
+        $this->productRepository
+            ->shouldReceive('getFiltered')
+            ->with($price, $category)
+            ->andReturn($expectedProducts);
 
         Cache::shouldReceive('get')
             ->with($cacheKey)
             ->andReturn($expectedProducts);
 
-        $this->productRepository
-            ->shouldReceive('getFiltered')
-            ->with($price, $category)
-            ->andReturn($expectedProducts);
-
         $products = $this->productService->get($price, $category);
 
-        $this->assertEquals($expectedProducts, $products);
-        $this->assertCount(count($expectedProducts), $products);
+        $expectedProductsDTO = $this->convertToProductDTOs($expectedProducts);
+
+        $this->assertEquals($expectedProductsDTO->toArray(), $products->toArray());
+        $this->assertCount($expectedProductsDTO->count(), $products);
         foreach ($products as $product) {
-            $this->assertInstanceOf(Product::class, $product);
-            $this->assertEquals($category, $product->category);
+            $this->assertInstanceOf(ProductDTO::class, $product);
             $this->assertNotNull($product->price);
-            $this->assertEquals($price, $product->price->original);
         }
     }
 
     public function testItMustApplyDiscountToInsuranceCategory()
     {
-        $category = 'insurance';
-        $price = 80000;
-        $discountedPrice = 56000;
-        $discountPercentage = "30%";
-        $expectedProducts = \Database\Factories\ProductFactory::times(5)->create(['category' => $category]);
-        foreach ($expectedProducts as $product) {
-            (new \Database\Factories\PriceFactory)->create([
-                'original' => $price,
-                'product_id' => $product->id,
-            ]);
-        }
+        $product = \App\Models\Product::factory()->create(['category' => 'insurance']);
+        $originalPrice = 200;
+
+        (new \Database\Factories\PriceFactory)->create([
+            'product_id' => $product->id,
+            'original' => $originalPrice,
+        ]);
+
+        $expectedDiscountedPrice = $originalPrice - ($originalPrice * ProductService::INSURANCE_DISCOUNT_PERCENTAGE / 100);
+
+        Cache::shouldReceive('has')
+            ->andReturn(false);
 
         $this->productRepository
-            ->shouldReceive('getFiltered')
-            ->with($price, $category)
-            ->andReturn($expectedProducts);
+            ->shouldReceive('get')
+            ->andReturn(new Collection([$product]));
 
-        $products = $this->productService->get($price, $category);
+        $products = $this->productService->get();
 
-        $this->assertEquals($expectedProducts, $products);
-        $this->assertCount(count($expectedProducts), $products);
-        foreach ($products as $product) {
-            $this->assertInstanceOf(Product::class, $product);
-            $this->assertEquals($category, $product->category);
-            $this->assertNotNull($product->price);
-            $this->assertEquals($discountPercentage, $product->price->discount_percentage);
-            $this->assertEquals($price, $product->price->original);
-            $this->assertEquals($discountedPrice, $product->price->final);
-        }
+        $this->assertInstanceOf(ProductDTO::class, $products->first());
+        $this->assertEquals('insurance', $products->first()->category);
+        $this->assertEquals($expectedDiscountedPrice, $products->first()->price->final);
+        $this->assertEquals(ProductService::INSURANCE_DISCOUNT_PERCENTAGE . '%', $products->first()->price->discount_percentage);
     }
 
     public function testItMustApplyDiscountToSku000003()
     {
-        $sku = '000003';
-        $price = 80000;
-        $discountedPrice = 68000;
-        $discountPercentage = "15%";
+        $product = \App\Models\Product::factory()->create(['sku' => '000003']);
+        $originalPrice = 150;
 
-        $product = (new \Database\Factories\ProductFactory)->create(['sku' => $sku]);
-        (new \Database\Factories\PriceFactory)->create([
-            'original' => $price,
+        \App\Models\Price::factory()->create([
             'product_id' => $product->id,
+            'original' => $originalPrice,
         ]);
 
-        $expectedProduct = new Collection([$product]);
+        $expectedDiscountedPrice = floor($originalPrice - ($originalPrice * ProductService::SKU_000003_DISCOUNT_PERCENTAGE / 100));
+
+        Cache::shouldReceive('has')
+            ->andReturn(false);
 
         $this->productRepository
             ->shouldReceive('get')
-            ->andReturn($expectedProduct);
+            ->andReturn(new Collection([$product]));
 
         $products = $this->productService->get();
 
-        $this->assertEquals($expectedProduct, $products);
-        $this->assertCount(count($expectedProduct), $products);
-        foreach ($products as $product) {
-            $this->assertInstanceOf(Product::class, $product);
-            $this->assertNotNull($product->price);
-            $this->assertEquals($discountPercentage, $product->price->discount_percentage);
-            $this->assertEquals($price, $product->price->original);
-            $this->assertEquals($discountedPrice, $product->price->final);
-        }
-        $this->refreshDatabase();
+        $this->assertInstanceOf(ProductDTO::class, $products->first());
+        $this->assertEquals('000003', $products->first()->sku);
+        $this->assertEquals($expectedDiscountedPrice, $products->first()->price->final);
+        $this->assertEquals(ProductService::SKU_000003_DISCOUNT_PERCENTAGE . '%', $products->first()->price->discount_percentage);
     }
 
     public function testItMustApplyOnlyInsuranceDiscount_ifSku000003BelongsToInsuranceCategory()
     {
-        $category = 'insurance';
-        $sku = '000003';
-        $price = 80000;
-        $discountedPrice = 56000;
-        $discountPercentage = "30%";
-
-        $product = (new \Database\Factories\ProductFactory)->create([
-            'sku' => $sku,
-            'category' => $category,
+        $product = \App\Models\Product::factory()->create([
+            'sku' => '000003',
+            'category' => 'insurance',
         ]);
-        (new \Database\Factories\PriceFactory)->create([
-            'original' => $price,
+        $originalPrice = 150;
+
+        \App\Models\Price::factory()->create([
             'product_id' => $product->id,
+            'original' => $originalPrice,
         ]);
 
-        $expectedProduct = new Collection([$product]);
+        $expectedDiscountedPrice = $originalPrice - ($originalPrice * ProductService::INSURANCE_DISCOUNT_PERCENTAGE / 100);
+
+        Cache::shouldReceive('has')
+            ->andReturn(false);
 
         $this->productRepository
             ->shouldReceive('get')
-            ->andReturn($expectedProduct);
+            ->andReturn(new Collection([$product]));
 
         $products = $this->productService->get();
 
-        $this->assertEquals($expectedProduct, $products);
-        $this->assertCount(count($expectedProduct), $products);
+        $this->assertInstanceOf(ProductDTO::class, $products->first());
+        $this->assertEquals('000003', $products->first()->sku);
+        $this->assertEquals('insurance', $products->first()->category);
+        $this->assertEquals($expectedDiscountedPrice, $products->first()->price->final);
+        $this->assertEquals(ProductService::INSURANCE_DISCOUNT_PERCENTAGE . '%', $products->first()->price->discount_percentage);
+    }
+
+
+    private function convertToProductDTOs(Collection $products): Collection
+    {
+        $productsDTO = new Collection();
         foreach ($products as $product) {
-            $this->assertInstanceOf(Product::class, $product);
-            $this->assertNotNull($product->price);
-            $this->assertEquals($discountPercentage, $product->price->discount_percentage);
-            $this->assertEquals($price, $product->price->original);
-            $this->assertEquals($discountedPrice, $product->price->final);
+            $priceDTO = new PriceDTO(
+                $product->price->original,
+                $product->price->final,
+                $product->price->discount_percentage,
+                $product->price->currency
+            );
+
+            $productsDTO->push(new ProductDTO(
+                $product->sku,
+                $product->name,
+                $product->category,
+                $priceDTO
+            ));
         }
-        $this->refreshDatabase();
+        return $productsDTO;
     }
 
     protected function tearDown(): void
