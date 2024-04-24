@@ -24,7 +24,7 @@ class ProductTest extends TestCase
 
         $this->app->instance(ProductService::class, $productService);
 
-        $request = Request::create('/products', 'GET', ['price' => 100, 'category' => 'insurance']);
+        $request = Request::create('/api/products', 'GET', ['price' => 100, 'category' => 'insurance']);
 
         $controller = new ProductController($productService);
         $response = $controller->getProducts($request);
@@ -50,7 +50,7 @@ class ProductTest extends TestCase
 
         $this->app->instance(ProductService::class, $productService);
 
-        $request = Request::create('/products', 'GET', ['price' => 100, 'category' => 'insurance']);
+        $request = Request::create('/api/products', 'GET', ['price' => 100, 'category' => 'insurance']);
 
         $controller = new ProductController($productService);
         $response = $controller->getProducts($request);
