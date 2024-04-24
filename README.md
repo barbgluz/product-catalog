@@ -7,7 +7,6 @@ It's build using Laravel, MySQL database and includes Swagger documentation for 
 - **Single endpoint:** provides a single endpoint for retrieving products
 - **Filtering:** supports filtering by price and category
 - **Discounts:** applies discounts based on predefined conditions
-- **Caching:** caches the products return for faster retrieval of data
 - **Documentation:** includes Swagger for easy API exploration
 - **Tests:** Unit and feature tests are implemented to ensure code functionality
 
@@ -52,87 +51,24 @@ git clone git@github.com:barbgluz/product-catalog.git
 cd product-catalog
 ```
 
-2. Set up your environment variables by renaming .env.example to .env and filling in the necessary configurations
-
-3. Build and run the Docker containers:
+2. Install dependencies:
 
 ```bash
-docker compose up -d --build
+composer install
 ```
+3. Set up your environment variables by renaming .env.example to .env and filling in the necessary configurations
 4. Run migrations to set up the database schema:
 
 ```bash
-docker compose exec app php artisan migrate
+php artisan migrate
 ```
 5. Seed the database with the provided dataset:
 
 ```bash
-docker compose exec app php artisan db:seed
+php artisan db:seed
 ```
 
-6. Access the application at `http://localhost:8000/api/products`
-
-
-## Usage
-### API Endpoint
-#### Query Parameters
-- category (optional): Filter products by category.
-- price (optional): Filter products by price (before discounts are applied).
-
-#### Example Requests
-```
-GET /api/products
-```
-
-```
-GET /products?category=insurance
-```
-
-```
-GET /products?price=5000
-```
-
-```
-GET /products?category=insurance&price=25000
-```
-
-#### Response Format
-The API returns a JSON array containing product objects with the following fields:
-- `sku`: Product SKU.
-- `name`: Product name.
-- `category`: Product category.
-- `price`: Object containing price information.
-    - `original`: Original price before discount.
-    - `final`: Final price after discount.
-    - `currency`: Currency (always USD).
-    - `discount_percentage`: Applied discount percentage (if applicable).
-
-#### Example Response
-```json
-[
-  {
-    "sku": "000001",
-    "name": "Product A",
-    "category": "electronics",
-    "price": {
-      "original": 15000,
-      "final": 15000,
-      "currency": "USD"
-    },
-    "discount_percentage": null
-  },
-  {
-    "sku": "000002",
-    "name": "Product B",
-    "category": "insurance",
-    "price": {
-      "original": 20000,
-      "final": 14000,
-      "currency": "USD"
-    },
-    "discount_percentage": "30%"
-  },
-  ...
-]
-
+6. Start the Laravel development server:
+```bash
+php artisan serve
 ```
