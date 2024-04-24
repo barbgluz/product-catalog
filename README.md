@@ -72,3 +72,66 @@ php artisan db:seed
 ```bash
 php artisan serve
 ```
+## Usage
+### API Endpoint
+#### Query Parameters
+- category (optional): Filter products by category.
+- price (optional): Filter products by price (before discounts are applied).
+
+#### Example Requests
+```
+GET /api/products
+```
+
+```
+GET /products?category=insurance
+```
+
+```
+GET /products?price=5000
+```
+
+```
+GET /products?category=insurance&price=25000
+```
+
+#### Response Format
+The API returns a JSON array containing product objects with the following fields:
+- `sku`: Product SKU.
+- `name`: Product name.
+- `category`: Product category.
+- `price`: Object containing price information.
+    - `original`: Original price before discount.
+    - `final`: Final price after discount.
+    - `currency`: Currency (always USD).
+    - `discount_percentage`: Applied discount percentage (if applicable).
+
+#### Example Response
+```json
+[
+  {
+    "sku": "000001",
+    "name": "Product A",
+    "category": "electronics",
+    "price": {
+      "original": 15000,
+      "final": 15000,
+      "currency": "USD"
+    },
+    "discount_percentage": null
+  },
+  {
+    "sku": "000002",
+    "name": "Product B",
+    "category": "insurance",
+    "price": {
+      "original": 20000,
+      "final": 14000,
+      "currency": "USD"
+    },
+    "discount_percentage": "30%"
+  },
+  ...
+]
+
+```
