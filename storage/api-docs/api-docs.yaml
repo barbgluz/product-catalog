@@ -4,7 +4,7 @@ info:
   description: Documentation for product catalog API
   version: 1.0.0
 paths:
-  /products:
+  /api/products:
     get:
       summary: Retrieve products
       description: Retrieves a list of products.
@@ -29,33 +29,37 @@ paths:
                 items:
                   type: object
                   properties:
-                    id:
-                      type: integer
-                      description: The product's ID
                     sku:
                       type: string
                       description: The product's SKU
+                      example: "000003"
                     name:
                       type: string
                       description: The product's name
+                      example: "SUV Vehicle, high end"
                     category:
                       type: string
                       description: The product's category
-                    price_original:
-                      type: number
-                      format: float
-                      description: The original price of the product
-                    price_final:
-                      type: number
-                      format: float
-                      description: The final price of the product after discounts
-                    discount_percentage:
-                      type: number
-                      format: float
-                      description: The discount percentage applied to the product
-                    currency:
-                      type: string
-                      description: The currency used for pricing
+                      example: "vehicle"
+                    price:
+                      type: object
+                      properties:
+                        original:
+                          type: number
+                          format: float
+                          example: 250000
+                        final:
+                          type: number
+                          format: float
+                          example: 175000
+                        discount_percentage:
+                          type: number
+                          format: float
+                          nullable: true
+                          example: "30%"
+                        currency:
+                          type: string
+                          example: "USD"
         '404':
           description: No products found
           content:
